@@ -7,7 +7,10 @@ class Registerserilizer(serializers.ModelSerializer):
         model = Register
         exclude = ['created_at','updated_at']
 
-
+class Role(serializers.ModelSerializer):
+    class Meta:
+        model = Role
+        fields = '__all__'
 
 class Roleserilizer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(queryset=Register.objects.all())

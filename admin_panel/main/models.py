@@ -7,6 +7,12 @@ ROLE_CHOICES = [
         ("User", "User"),
         ("Viewer", "Viewer"),
     ]
+
+class Role(models.Model):
+    rolename = models.CharField(max_length=30)
+
+    def __str__(self):
+        return self.rolename
 class Register(AbstractUser):
     # username = models.CharField(max_length=150, unique=True)
     # email = models.EmailField(unique=True)
@@ -19,16 +25,8 @@ class Register(AbstractUser):
         return self.username
     
 class RoleUser(models.Model):
-    user = models.OneToOneField(
-        Register,
-        on_delete=models.CASCADE,
-        related_name='role'  
-    )
-    role = models.CharField(
-        max_length=10,
-        choices=ROLE_CHOICES,
-        default='User'
-    )
+    user = models.OneToOneField(Register,on_delete=models.CASCADE,related_name='role')
+    role = models.OneToOneField(Role,on_delete=models.CASCADE,related_name='name')
 
     def __str__(self):
         return f"{self.user.username} - Role - {self.role}"
