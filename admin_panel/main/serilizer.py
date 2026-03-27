@@ -7,9 +7,14 @@ class Registerserilizer(serializers.ModelSerializer):
         model = Register
         exclude = ['created_at','updated_at']
 
-class Role(serializers.ModelSerializer):
+class Roleseri(serializers.ModelSerializer):
     class Meta:
         model = Role
+        fields = '__all__'
+
+class Permissionseri(serializers.ModelSerializer):
+    class Meta:
+        model = Permission
         fields = '__all__'
 
 class Roleserilizer(serializers.ModelSerializer):
@@ -38,6 +43,10 @@ class Productserilizer(serializers.ModelSerializer):
 
 
 class Orderserilizer(serializers.ModelSerializer):
+    # user=serializers.SlugRelatedField(queryset=Register.objects.all(),slug_field='user_order')
+    # product=serializers.SlugRelatedField(queryset=Product.objects.all(),slug_field='product')
+    # user = serializers.StringRelatedField(read_only=True)
+    # product = serializers.StringRelatedField(read_only=True)
     class Meta:
         model = Order
         fields = '__all__'
@@ -49,4 +58,16 @@ class OrderDetailsserilizer(serializers.ModelSerializer):
         
 
 
+class Rolepermissionserilizer(serializers.ModelSerializer):
+    role = serializers.SlugRelatedField(
+        queryset=Role.objects.all(),
+        slug_field='rolename'
+    )
+    permission = serializers.SlugRelatedField(
+        queryset=Permission.objects.all(),
+        slug_field='permission_name'
+    )
 
+    class Meta:
+        model = RolePermission
+        fields = '__all__'

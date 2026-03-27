@@ -13,6 +13,8 @@ from django.contrib.auth.hashers import make_password
 from rest_framework.response import Response
 from django.core.mail import send_mail,EmailMessage
 
+from main.permissions import *
+
 def random_password(length):
     password=""
     for i in range(length):
@@ -25,7 +27,7 @@ def random_password(length):
     return password
 
 
-
+from rest_framework.response import Response
 class Registerviewset(APIView):
     def post(self, request):
         errors = {}
@@ -45,7 +47,7 @@ class Registerviewset(APIView):
                 errors['email'] = 'Email already exists'
 
         if errors:
-            return Response({'Errors': errors})
+            return Response({"error": True, "status_code": 400, "message": str(errors)})
 
 
         gender = 'male'
@@ -61,10 +63,11 @@ class Registerviewset(APIView):
 
         if serializer.is_valid():
             try:
-                user = serializer.save()
+                x= serializer.save()
 
                 #  Create role after user created
-                RoleUser.objects.create(user=user)   # default 'User' 
+                role_obj = Role.objects.get(rolename="User")
+                RoleUser.objects.create(user=x, role=role_obj)
 
                 # Send email
                 EmailMessage(
@@ -74,65 +77,91 @@ class Registerviewset(APIView):
                     [email],
                 ).send()
 
-                return Response({
-                    'Email': f'Password sent to {email}',
-                    'Message': 'Register Successfully'
-                })
+                return Response({"error": False, "status_code": 201, "message":f"Register Successfully & Password sent to {email}"})
 
             except Exception as e:
-                return Response({"error": str(e)})
+                return Response({"error": False, "status_code": 400, "message":"demo"})
 
-        return Response(serializer.errors)
+        return Response({"error": False, "status_code": 400, "message":str(serializer.errors)})
     
 
 from rest_framework import  viewsets
-from main.permissions import IsManager
 
-class Roleserilizerviewset(viewsets.ModelViewSet):
-    serializer_class = Roleserilizer
-    queryset = RoleUser.objects.all()
+from main.permissions  import Dynamicpermission,Assignedpermissionset
+class RolePermissionviewset(viewsets.ModelViewSet):
+    serializer_class = Rolepermissionserilizer
+    queryset = RolePermission.objects.all()
     authentication_classes = [JWTAuthentication]    
-    permission_classes = [IsAuthenticated,IsManager]
+    permission_classes = [IsAuthenticated,Assignedpermissionset]
 
-
-
-from main.permissions import CategoryPermission
 
 class Categoryserilizerviewset(viewsets.ModelViewSet):
     serializer_class = Categoryserilizer
     queryset = Category.objects.all()
     authentication_classes = [JWTAuthentication]    
-    permission_classes = [IsAuthenticated,CategoryPermission]
+    permission_classes = [IsAuthenticated,Dynamicpermission]
 
 
 from main.mypagination import mypaginatior
 from django_filters.rest_framework import  DjangoFilterBackend
 from rest_framework.filters import SearchFilter,OrderingFilter
-from main.permissions  import ProductPermission
+
 
 class Productserilizerviewset(viewsets.ModelViewSet):   
     serializer_class = Productserilizer
     queryset = Product.objects.all()
     authentication_classes = [JWTAuthentication]    
-    permission_classes = [IsAuthenticated,ProductPermission]
+    permission_classes = [IsAuthenticated,Dynamicpermission]
 
     # pagination_class=mypaginatior
     filter_backends=[DjangoFilterBackend,SearchFilter]
     SearchFilter=['category']
 
 
-from main.permissions  import OrderPermission,OrderDetailsPermission
-class Orderserilizerviewset(viewsets.ModelViewSet):
-    serializer_class = Orderserilizer
-    queryset = Order.objects.all()
+
+
+class Orderserilizerviewset(APIView):
+
     authentication_classes = [JWTAuthentication]    
-    permission_classes = [IsAuthenticated,OrderPermission]
+    permission_classes = [IsAuthenticated,Orderpermission]
+    
+    def get(self, request):
+        orders = Order.objects.filter(user=request.user)
+        print('orders: ', orders)
+
+        serializer = Orderserilizer(orders, many=True)
+
+        return Response({
+            "error": False,
+            "status_code": 200,
+            "message": "Display Data",
+            "Data": serializer.data
+        })
+    
+    def post(self,request):
+        data=request.data.copy()
+        data['user']=request.session.get('user')
+        seri=Orderserilizer(data=data)
+        if seri.is_valid():
+            seri.save()
+            return Response({
+                "error": False,
+                "status_code": 201,
+                "message": "Display Data",
+                "Data": seri.data
+            })  
+        return Response({
+            "error": True,
+            "status_code": 400,
+            "message": "Not Data Add",
+        })
+
 
 class OrderDetailsserilizerviewset(viewsets.ModelViewSet):
     serializer_class = OrderDetailsserilizer
     queryset = OrderDetails.objects.all()
     authentication_classes = [JWTAuthentication]    
-    permission_classes = [IsAuthenticated,OrderDetailsPermission]
+    permission_classes = [IsAuthenticated,Dynamicpermission]
 
 
 
@@ -181,7 +210,8 @@ class Loginviewset(APIView):
             errors['password']='Password Not Currect'
         
         if errors:
-            return Response({'Error':errors})
+            return Response({"error": True, "status_code": 400, "message":errors})
+
         
         try:
             o=otp_genrate(6)
@@ -195,8 +225,9 @@ class Loginviewset(APIView):
             request.session['user'] = user.id
             request.session['otp']=o
         except Exception as e:
-            return Response({"error": "Otp not send"})
-        return Response({'Message':'Login Sucessful & OTP send On Mail'})
+            return Response({"error": True, "status_code": 400, "message":"Otp not send"})
+        
+        return Response({"error": False, "status_code": 201, "message":'Login Sucessful & OTP send On Mail'})
     
 
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -209,12 +240,12 @@ class Otpverification(APIView):
         if not otp:
             return Response({"error": "Enter OTP"})
         if str(otp) != str(request.session.get('otp')):
-            return Response({"error": "Invaide OTP"})
+            return Response({"error": True, "status_code": 400, "message":"Invaide OTP"})
         
         user_id = request.session.get('user')
 
         if not user_id:
-            return Response({"error": "Session expired. Please login again"})
+            return Response({"error": True, "status_code": 400, "message":"Session expired. Please login again"})
 
         try:
             user = Register.objects.get(id=user_id)
@@ -225,12 +256,15 @@ class Otpverification(APIView):
     
 
         except Register.DoesNotExist:
-            return Response({"error": "User not found"})
+            return Response({"error": True, "status_code": 400, "message":"User not found"})
+
         refresh = RefreshToken.for_user(user)
         request.session.pop('otp', None)
         
 
+
         return Response({
+            "error": False, "status_code": 201,
             'message': 'OTP Confirmed',
             'refresh': str(refresh),
             'access': str(refresh.access_token)
@@ -248,17 +282,17 @@ class Logout(APIView):
                 user.save()
                 
                 request.session.pop('user')
-                return Response({'message': 'Logout'})
+                return Response({"error": False, "status_code": 201,'message': 'Logout'})
             else:
-                return Response({'message':'OTP Verification not pls Otp verified'})
+                return Response({"error": True, "status_code": 400,'message':'OTP Verification not pls Otp verified'})
         except:
-            return Response({'message':'Alredy logout pls login'})
+            return Response({"error": True, "status_code": 400,'message':'Alredy logout pls login'})
         
 
 class forceloogout(APIView):
     def get(self,request):
         request.session.pop('user')
-        return Response({'message': 'Logout'})
+        return Response({"error": False, "status_code": 200,'message': 'Logout'})
     
 
 # change password
@@ -269,40 +303,62 @@ class ChangePassword(APIView):
         new_password=data.get('new_password')
         user_id = request.session.get('user')
         if not old_password:
-            return Response({"error": "Enter Old Password"})    
+            return Response({"error": True, "status_code": 400,"message": "Enter Old Password"})    
         if not new_password:
-            return Response({"error": "Enter New Password"})
+            return Response({"error": True, "status_code": 400,"message": "Enter New Password"})
         
         if old_password == new_password:
-            return Response({"error": "Old Password and New Password cannot be the same"})
+            return Response({"error": True, "status_code": 400,"message": "Old Password and New Password cannot be the same"})
 
         if not user_id:
-            return Response({"error": "Session expired. Please login again"})
+            return Response({"error": True, "status_code": 400,"message": "Session expired. Please login again"})
 
         try:
             user = Register.objects.get(id=user_id)
             if not check_password(old_password, user.password):
-                return Response({"error": "Old password is incorrect"})
+                return Response({"error": True, "status_code": 400,"message": "Old password is incorrect"})
             user.password = make_password(new_password)
             user.save()
-            return Response({"message": "Password changed successfully"})
+            return Response({"error": False, "status_code": 200,"message": "Password changed successfully"})
         except Register.DoesNotExist:
-            return Response({"error": "User not found"})
+            return Response({"error": True, "status_code": 400,"error": "User not found"})
         
 
 
 class usersviewset(APIView):
     def get(self,request):
+        if not request.session.get('user'):
+            return Response({"error": True, "status_code": 400, "message": "Pls Login"})
+        user = request.session.get('user')
+        try:
+            x = RoleUser.objects.get(user_id=user)
+            print('x: ', x.role.rolename)
+        except RoleUser.DoesNotExist:
+            return Response({"error": True, "status_code": 400, "message": "User not found"})
+
+        if x.role.rolename != 'Admin' and x.role.rolename != 'Manager':
+            return Response({"error": True, "status_code": 400, "message": "You don't have permission to access this resource"})
         users_count = Register.objects.count()
         users = Register.objects.all()
-        return Response({'Total user:': users_count, 'users': Registerserilizer(users, many=True).data}) 
+        return Response({"error": False, "status_code": 200, "message": "Success", "data": {'Total user:': users_count, 'users': Registerserilizer(users, many=True).data}}) 
     
 
 class ActivateUser(APIView):
     def get(self,request):
+        if not request.session.get('user'):
+            return Response({"error": True, "status_code": 400, "message": "Pls Login"})
+        user = request.session.get('user')
+        try:
+            x = RoleUser.objects.get(user_id=user)
+            print('x: ', x.role.rolename)
+        except RoleUser.DoesNotExist:
+            return Response({"error": True, "status_code": 400, "message": "User not found"})
+
+        if x.role.rolename != 'Admin' and x.role.rolename != 'Manager':
+            return Response({"error": True, "status_code": 400, "message": "You don't have permission to access this resource"})
         users_count = Register.objects.filter(is_active=True).count()
         users = Register.objects.filter(is_active=True)
-        return Response({'Total Active User:': users_count, 'users': Registerserilizer(users, many=True).data})
+        return Response({"error": False, "status_code": 200, "message": "Success", "data": {'Total Active User:': users_count, 'users': Registerserilizer(users, many=True).data}})
 
 
 
@@ -311,7 +367,7 @@ class userviewset(viewsets.ModelViewSet):
     serializer_class = Registerserilizer
     queryset = Register.objects.all()
     authentication_classes = [JWTAuthentication]    
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,IsAdminOrManager]
     pagination_class = mypaginatior 
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -319,3 +375,14 @@ class userviewset(viewsets.ModelViewSet):
     search_fields = ['username', 'email']
     ordering_fields = ['username', 'email']
 
+class Roleviewset(viewsets.ModelViewSet):
+    serializer_class =  Roleseri
+    queryset = Role.objects.all()
+    authentication_classes=[JWTAuthentication]
+    permission_classes=[IsAuthenticated,IsAdminOrManager]
+
+class Permisssionviewset(viewsets.ModelViewSet):
+    serializer_class = Permissionseri
+    queryset = Permission.objects.all()
+    authentication_classes=[JWTAuthentication]
+    permission_classes=[IsAuthenticated,IsAdminOrManager]

@@ -8,12 +8,14 @@ from rest_framework_simplejwt.views import (
 
 
 router = DefaultRouter()
-router.register('role',views.Roleserilizerviewset,basename='role')
+router.register('rolePermission',views.RolePermissionviewset,basename='role_permission') # role details
 router.register('category',views.Categoryserilizerviewset,basename='category')
 router.register('product',views.Productserilizerviewset,basename='product')
-router.register('order',views.Orderserilizerviewset,basename='order')
+# router.register('order',views.Orderserilizerviewset,basename='order')
 router.register('order_details',views.OrderDetailsserilizerviewset,basename='order_details')
-router.register('users',views.userviewset,basename='users')  # all users list viewset
+router.register('users',views.userviewset,basename='users')  
+router.register('roles',views.Roleviewset,basename='roles')  #CRUD Role
+router.register('permission',views.Permisssionviewset,basename='permission')  #CRUD Permissions
 
 urlpatterns = [
     path('',include(router.urls)),
@@ -32,5 +34,6 @@ urlpatterns = [
 
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('change_password/', views.ChangePassword.as_view(), name='change_password'),
+    path('order/', views.Orderserilizerviewset.as_view(), name='order'),
 
 ]

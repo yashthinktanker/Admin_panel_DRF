@@ -13,6 +13,22 @@ class Role(models.Model):
 
     def __str__(self):
         return self.rolename
+
+
+class Permission(models.Model):
+    permission_name = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.permission_name
+
+
+class RolePermission(models.Model):
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='role_permissions')
+    permission = models.ForeignKey(Permission, on_delete=models.CASCADE,related_name='permission_roles')
+
+    def __str__(self):
+        return f"{self.role.rolename} - {self.permission.permission_name}"
+    
 class Register(AbstractUser):
     # username = models.CharField(max_length=150, unique=True)
     # email = models.EmailField(unique=True)
@@ -25,11 +41,11 @@ class Register(AbstractUser):
         return self.username
     
 class RoleUser(models.Model):
-    user = models.OneToOneField(Register,on_delete=models.CASCADE,related_name='role')
-    role = models.OneToOneField(Role,on_delete=models.CASCADE,related_name='name')
+    user = models.OneToOneField(Register, on_delete=models.CASCADE, related_name='role')
+    role = models.ForeignKey(Role, on_delete=models.CASCADE,default='User')
 
     def __str__(self):
-        return f"{self.user.username} - Role - {self.role}"
+        return f"{self.user.username} - {self.role.rolename}"
 
 class Category(models.Model):
     category_name = models.CharField(max_length=16,unique=True)
@@ -42,7 +58,7 @@ class Product(models.Model):
     product_name = models.CharField(max_length=50,null=False)
 
     def __str__(self):
-        return f'{self.product_name} = category = {self.product_name}'
+        return f'{self.product_name}'
     
 
 class Order(models.Model):
