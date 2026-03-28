@@ -31,6 +31,8 @@ class Dynamicpermission(BasePermission):
             return request.method in per
         if rolename == 'Manager':
             return request.method in ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+        if rolename == 'Admin':
+            return True
         return False
     
 
@@ -49,6 +51,8 @@ class Assignedpermissionset(BasePermission):
             return False
         elif rolename == 'Manager':
             return request.method in ['GET', 'POST', 'PUT', 'PATCH']
+        elif rolename == 'Admin':
+            return True
         return False
     
 
@@ -90,4 +94,26 @@ class Orderpermission(BasePermission):
             return request.method in ['GET', 'POST']
         elif rolename == 'Manager':
             return request.method in ['GET', 'POST', 'PUT', 'PATCH']
+        elif rolename == 'Admin':
+            return True
+        return False 
+    
+
+class IsAdminrole(BasePermission):
+    def has_permission(self,request,view):
+        user = request.user
+        if not user:
+            return False
+        try :
+            role_user = RoleUser.objects.get(user_id=user.id)
+            print('role_user: ', role_user)
+        except RoleUser.DoesNotExist:
+            self.message = "User does not have an assigned role."
+            return False
+        rolename = role_user.role.rolename
+
+        if rolename == 'Admin':
+            return True
+        elif rolename == 'Manager':
+            return False
         return False 

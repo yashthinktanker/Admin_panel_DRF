@@ -143,7 +143,8 @@ class Orderserilizerviewset(APIView):
         data['user']=request.session.get('user')
         seri=Orderserilizer(data=data)
         if seri.is_valid():
-            seri.save()
+            x=seri.save()
+            OrderDetails.objects.create(order=x)
             return Response({
                 "error": False,
                 "status_code": 201,
@@ -159,10 +160,23 @@ class Orderserilizerviewset(APIView):
 
 class OrderDetailsserilizerviewset(viewsets.ModelViewSet):
     serializer_class = OrderDetailsserilizer
-    queryset = OrderDetails.objects.all()
     authentication_classes = [JWTAuthentication]    
     permission_classes = [IsAuthenticated,Dynamicpermission]
+    
+    def get_queryset(self):
+        user = self.request.user
 
+        try:
+            u = Register.objects.get(id=user.id)
+            orders = Order.objects.filter(user=u)
+
+            if not orders.exists():
+                return OrderDetails.objects.none()
+
+            return OrderDetails.objects.filter(order__in=orders)
+
+        except Register.DoesNotExist:
+            return OrderDetails.objects.none()
 
 
 
@@ -367,7 +381,7 @@ class userviewset(viewsets.ModelViewSet):
     serializer_class = Registerserilizer
     queryset = Register.objects.all()
     authentication_classes = [JWTAuthentication]    
-    permission_classes = [IsAuthenticated,IsAdminOrManager]
+    permission_classes = [IsAuthenticated,IsAdminrole]
     pagination_class = mypaginatior 
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -386,3 +400,23 @@ class Permisssionviewset(viewsets.ModelViewSet):
     queryset = Permission.objects.all()
     authentication_classes=[JWTAuthentication]
     permission_classes=[IsAuthenticated,IsAdminOrManager]
+
+
+class Allorder(viewsets.ModelViewSet):
+    serializer_class=Orderserilizer
+    queryset = Order.objects.all()
+    authentication_classes=[JWTAuthentication]
+    permission_classes=[IsAuthenticated,IsAdminOrManager]
+
+class AllordeerDetails(viewsets.ModelViewSet):
+    serializer_class=OrderDetailsserilizer
+    queryset = OrderDetails.objects.all()
+    authentication_classes=[JWTAuthentication]
+    permission_classes=[IsAuthenticated,IsAdminOrManager]
+
+
+class UserRoleviewset(viewsets.ModelViewSet):
+    serializer_class = RoleUserserilizer
+    queryset = Role.objects.all()
+    authentication_classes=[JWTAuthentication]
+    permission_classes=[IsAuthenticated,IsAdminrole]

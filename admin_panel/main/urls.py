@@ -16,6 +16,9 @@ router.register('order_details',views.OrderDetailsserilizerviewset,basename='ord
 router.register('users',views.userviewset,basename='users')  
 router.register('roles',views.Roleviewset,basename='roles')  #CRUD Role
 router.register('permission',views.Permisssionviewset,basename='permission')  #CRUD Permissions
+router.register('allorder',views.Allorder,basename='allorder')  #CRUD AllOrders
+router.register('allorderdetails',views.AllordeerDetails,basename='allorderdetails')  #CRUD AllOrderDetails
+router.register('UserRole',views.UserRoleviewset,basename='UserRole')  #CRUD AllOrderDetails
 
 urlpatterns = [
     path('',include(router.urls)),

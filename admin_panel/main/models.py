@@ -8,21 +8,45 @@ ROLE_CHOICES = [
         ("Viewer", "Viewer"),
     ]
 
-class Role(models.Model):
+
+class Nonedeleted(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_delete=False)
+    
+class SoftDelete(models.Model):
+    is_delete = models.BooleanField(default=False)
+
+    everithing = models.Manager()
+    objects = Nonedeleted()
+
+    def delete(self):
+        self.is_delete = True
+        self.save()
+
+    def soft_delete(self):
+        self.is_delete = True
+    
+    def restore(self):
+        self.is_delete = False
+
+    class Meta:
+        abstract = True
+
+class Role(SoftDelete):
     rolename = models.CharField(max_length=30)
 
     def __str__(self):
         return self.rolename
 
 
-class Permission(models.Model):
+class Permission(SoftDelete):
     permission_name = models.CharField(max_length=50)
 
     def __str__(self):
         return self.permission_name
 
 
-class RolePermission(models.Model):
+class RolePermission(SoftDelete):
     role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='role_permissions')
     permission = models.ForeignKey(Permission, on_delete=models.CASCADE,related_name='permission_roles')
 
@@ -40,20 +64,20 @@ class Register(AbstractUser):
     def __str__(self):
         return self.username
     
-class RoleUser(models.Model):
+class RoleUser(SoftDelete):
     user = models.OneToOneField(Register, on_delete=models.CASCADE, related_name='role')
     role = models.ForeignKey(Role, on_delete=models.CASCADE,default='User')
 
     def __str__(self):
         return f"{self.user.username} - {self.role.rolename}"
 
-class Category(models.Model):
+class Category(SoftDelete):
     category_name = models.CharField(max_length=16,unique=True)
 
     def __str__(self):
         return self.category_name
 
-class Product(models.Model):
+class Product(SoftDelete):
     category = models.ForeignKey(Category,on_delete=models.CASCADE,related_name='category')
     product_name = models.CharField(max_length=50,null=False)
 
@@ -61,7 +85,7 @@ class Product(models.Model):
         return f'{self.product_name}'
     
 
-class Order(models.Model):
+class Order(SoftDelete):
     user = models.ForeignKey(Register,on_delete=models.CASCADE,related_name='user_order') 
     product = models.ForeignKey(Product,on_delete=models.CASCADE,related_name='product')
     create_at = models.DateTimeField(auto_now_add=True)
@@ -75,7 +99,7 @@ STATUS_CHOICES = [
         ("Completed", "Completed"),
     ]
 
-class OrderDetails(models.Model):
+class OrderDetails(SoftDelete):
     order = models.ForeignKey(Order,on_delete=models.CASCADE,related_name='order') 
     status = models.CharField(max_length=15,choices=STATUS_CHOICES,default='pending')
 
