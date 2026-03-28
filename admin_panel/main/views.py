@@ -95,6 +95,8 @@ class RolePermissionviewset(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated,Assignedpermissionset]
 
 
+
+
 class Categoryserilizerviewset(viewsets.ModelViewSet):
     serializer_class = Categoryserilizer
     queryset = Category.objects.all()
@@ -395,6 +397,11 @@ class Roleviewset(viewsets.ModelViewSet):
     authentication_classes=[JWTAuthentication]
     permission_classes=[IsAuthenticated,IsAdminOrManager]
 
+    # def destroy(self, request, *args, **kwargs):
+    #     return Response(
+    #         {"message": "Record deleted successfully (soft delete)."}
+    #     )
+
 class Permisssionviewset(viewsets.ModelViewSet):
     serializer_class = Permissionseri
     queryset = Permission.objects.all()
@@ -407,7 +414,7 @@ class Allorder(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     authentication_classes=[JWTAuthentication]
     permission_classes=[IsAuthenticated,IsAdminOrManager]
-
+    
 class AllordeerDetails(viewsets.ModelViewSet):
     serializer_class=OrderDetailsserilizer
     queryset = OrderDetails.objects.all()

@@ -21,6 +21,8 @@ class Roleseri(serializers.ModelSerializer):
         if Role.objects.filter(rolename__iexact=data).exists():
             raise serializers.ValidationError("Role already exists.")
         return data
+    
+    
 class Permissionseri(serializers.ModelSerializer):
     class Meta:
         model = Permission
