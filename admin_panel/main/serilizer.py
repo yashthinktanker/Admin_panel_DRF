@@ -6,7 +6,7 @@ class Registerserilizer(serializers.ModelSerializer):
   
     class Meta:
         model = Register
-        fields = ['username','email','gender']
+        fields = ['id','username','email','gender']
 
 class Roleseri(serializers.ModelSerializer):
     class Meta:

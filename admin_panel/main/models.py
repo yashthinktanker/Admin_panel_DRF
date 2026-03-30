@@ -55,7 +55,7 @@ class RolePermission(SoftDelete):
     def __str__(self):
         return f"{self.role.rolename} - {self.permission.permission_name}"
     
-class Register(AbstractUser):
+class Register(AbstractUser,SoftDelete):
     # username = models.CharField(max_length=150, unique=True)
     # email = models.EmailField(unique=True)
     gender = models.CharField(max_length=7,default='male')

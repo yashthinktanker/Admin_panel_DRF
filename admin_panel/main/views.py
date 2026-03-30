@@ -406,7 +406,7 @@ class userviewset(viewsets.ModelViewSet):
     serializer_class = Registerserilizer
     queryset = Register.objects.all()
     authentication_classes = [JWTAuthentication]    
-    permission_classes = [IsAuthenticated,IsAdminrole]
+    permission_classes = [IsAuthenticated,IsAdminOrManager]
     pagination_class = mypaginatior 
 
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -489,4 +489,3 @@ class UserRoleviewset(viewsets.ModelViewSet):
     permission_classes=[IsAuthenticated,IsAdminrole]
 
 
-    
