@@ -26,7 +26,8 @@ class Roleseri(serializers.ModelSerializer):
 class Permissionseri(serializers.ModelSerializer):
     class Meta:
         model = Permission
-        fields = '__all__'
+        # fields = '__all__'
+        exclude = ['is_delete']
 
     def validate_permission_name(self, data):
         allowed = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
@@ -87,10 +88,17 @@ class OrderDetailsserilizer(serializers.ModelSerializer):
         model = OrderDetails
         # fields = '__all__'
         exclude = ['is_delete']
-        
-    def validate(self, data):
-        if data == None:
-            return Response({"error": True, "status_code": 400, "message": "Invalid data provided"})
+
+    
+class OrderDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderDetails
+        exclude = ['is_delete']
+
+              
+    # def validate(self, data):
+    #     if data == None:
+    #         return Response({"error": True, "status_code": 400, "message": "Invalid data provided"})
 
 
 class Rolepermissionserilizer(serializers.ModelSerializer):

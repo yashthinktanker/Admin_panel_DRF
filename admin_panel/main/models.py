@@ -25,9 +25,11 @@ class SoftDelete(models.Model):
 
     def soft_delete(self):
         self.is_delete = True
+        self.save()
     
     def restore(self):
         self.is_delete = False
+        self.save()
 
     class Meta:
         abstract = True
@@ -94,8 +96,8 @@ class Order(SoftDelete):
         return self.user.username
 
 STATUS_CHOICES = [
-        ("pending", "pending"),
-        ("process", "process"),
+        ("Pending", "Pending"),
+        ("Process", "Process"),
         ("Completed", "Completed"),
     ]
 

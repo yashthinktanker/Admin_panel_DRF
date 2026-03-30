@@ -102,6 +102,17 @@ class Categoryserilizerviewset(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     authentication_classes = [JWTAuthentication]    
     permission_classes = [IsAuthenticated,Dynamicpermission]
+    def destroy(self, request,pk):
+        print(pk)
+        x=Category.objects.filter(id=pk).first()
+        if x:
+            x.delete()
+            return Response(
+            {"error": False, "status_code": 200, "message": "Category Is deleted"}
+            )
+        return Response(
+            {"error": True, "status_code": 400, "message": "Category not Found"}
+            )
 
 
 from main.mypagination import mypaginatior
@@ -118,6 +129,18 @@ class Productserilizerviewset(viewsets.ModelViewSet):
     # pagination_class=mypaginatior
     filter_backends=[DjangoFilterBackend,SearchFilter]
     SearchFilter=['category']
+
+    def destroy(self, request,pk):
+        print(pk)
+        x=Product.objects.filter(id=pk).first()
+        if x:
+            x.delete()
+            return Response(
+            {"error": False, "status_code": 200, "message": "Product Is deleted"}
+            )
+        return Response(
+            {"error": True, "status_code": 400, "message": "Product not Found"}
+            )
 
 
 
@@ -391,16 +414,37 @@ class userviewset(viewsets.ModelViewSet):
     search_fields = ['username', 'email']
     ordering_fields = ['username', 'email']
 
+    def destroy(self, request,pk):
+        print(pk)
+        x=Register.objects.filter(id=pk).first()
+        if x:
+            x.delete()
+            return Response(
+            {"error": False, "status_code": 200, "message": "User Is deleted"}
+            )
+        return Response(
+            {"error": True, "status_code": 400, "message": "User not Found"}
+            )
+
 class Roleviewset(viewsets.ModelViewSet):
     serializer_class =  Roleseri
     queryset = Role.objects.all()
     authentication_classes=[JWTAuthentication]
     permission_classes=[IsAuthenticated,IsAdminOrManager]
 
-    # def destroy(self, request, *args, **kwargs):
-    #     return Response(
-    #         {"message": "Record deleted successfully (soft delete)."}
-    #     )
+    def destroy(self, request,pk):
+        print(pk)
+        x=Role.objects.filter(id=pk,is_delete=False).first()
+        if x:
+            x.delete()
+            return Response(
+            {"error": False, "status_code": 200, "message": "Permission Is deleted"}
+            )
+        return Response(
+            {"error": True, "status_code": 400, "message": "Id not Found"}
+            )
+
+
 
 class Permisssionviewset(viewsets.ModelViewSet):
     serializer_class = Permissionseri
@@ -409,17 +453,33 @@ class Permisssionviewset(viewsets.ModelViewSet):
     permission_classes=[IsAuthenticated,IsAdminOrManager]
 
 
+    def destroy(self, request,pk):
+        print(pk)
+        x=Permission.objects.filter(id=pk).first()
+        if x:
+            x.delete()
+            return Response(
+            {"error": False, "status_code": 200, "message": "Permission Is deleted"}
+            )
+        return Response(
+            {"error": True, "status_code": 400, "message": "Id not Found"}
+            )
+    
+
+
 class Allorder(viewsets.ModelViewSet):
     serializer_class=Orderserilizer
     queryset = Order.objects.all()
     authentication_classes=[JWTAuthentication]
     permission_classes=[IsAuthenticated,IsAdminOrManager]
+    http_method_names=['get']
     
 class AllordeerDetails(viewsets.ModelViewSet):
     serializer_class=OrderDetailsserilizer
     queryset = OrderDetails.objects.all()
     authentication_classes=[JWTAuthentication]
     permission_classes=[IsAuthenticated,IsAdminOrManager]
+    http_method_names=['get']
 
 
 class UserRoleviewset(viewsets.ModelViewSet):
@@ -427,3 +487,6 @@ class UserRoleviewset(viewsets.ModelViewSet):
     queryset = Role.objects.all()
     authentication_classes=[JWTAuthentication]
     permission_classes=[IsAuthenticated,IsAdminrole]
+
+
+    
