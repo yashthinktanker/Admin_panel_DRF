@@ -5,6 +5,7 @@ from django.contrib.auth.models import AbstractUser
 ROLE_CHOICES = [
         ("Manager", "Manager"),
         ("User", "User"),
+        ("Admin", "Admin"),
         ("Viewer", "Viewer"),
     ]
 
@@ -71,7 +72,7 @@ class RoleUser(SoftDelete):
     role = models.ForeignKey(Role, on_delete=models.CASCADE,default='User')
 
     def __str__(self):
-        return f"{self.user.username} - {self.role.rolename}"
+        return f"{self.user.username} - {self.role.rolename} - {self.id}"
 
 class Category(SoftDelete):
     category_name = models.CharField(max_length=16,unique=True)

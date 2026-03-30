@@ -6,7 +6,7 @@ class Registerserilizer(serializers.ModelSerializer):
   
     class Meta:
         model = Register
-        fields = ['id','username','email','gender']
+        fields = ['id','username','email','gender','password']
 
 class Roleseri(serializers.ModelSerializer):
     class Meta:
@@ -113,7 +113,8 @@ class Rolepermissionserilizer(serializers.ModelSerializer):
 
     class Meta:
         model = RolePermission
-        fields = '__all__'
+        # fields = '__all__'
+        exclude = ['is_delete']
 
 
 
@@ -121,5 +122,5 @@ class RoleUserserilizer(serializers.ModelSerializer):
     class Meta:
         model = RoleUser
         # fields = '__all__'
-        exclude = ['is_delete']
+        
         

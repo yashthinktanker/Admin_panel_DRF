@@ -214,59 +214,65 @@ def otp_genrate(length):
 from django.contrib.auth.hashers import check_password
 
 class Loginviewset(APIView):
-    def post(self,request):
-        # user=request.session.get('user')
-        
-        # if user:
-        #     try:
-        #         Register.objects.get(id=user)
-        #         return Response({'Message':'Already Login'})
-        #     except Register.DoesNotExist:
-        #         pass
-        
-        errors={}
-        data = request.data.copy()
+    def post(self, request):
+        errors = {}
+        data = request.data
 
-        email=data.get('email')
+        email = data.get('email')
+        password = data.get('password')
 
-
-        if not email :
-            errors['email']='Email Is Required'
-        else:
-            try:
-                user = Register.objects.get(email=email)
-                print('user: ', user.password)
-            except Register.DoesNotExist:
-                errors['email']=  "User not found"
-
-        password=data.get('password')
-        print('password: ==', password)
+        if not email:
+            errors['email'] = 'Email is required'
         if not password:
-            errors['password']='Password Is Required'
+            errors['password'] = 'Password is required'
 
+        if errors:
+            return Response({"error": True, "status_code": 400, "message": errors})
+
+
+        try:
+            user = Register.objects.get(email=email)
+        except Register.DoesNotExist:
+            return Response({
+                "error": True,
+                "status_code": 400,
+                "message": {"email": "Email is not registered"}
+            })
 
         if not check_password(password, user.password):
-            errors['password']='Password Not Currect'
-        
-        if errors:
-            return Response({"error": True, "status_code": 400, "message":errors})
+            return Response({
+                "error": True,
+                "status_code": 400,
+                "message": {"password": "Incorrect password"}
+            })
 
-        
+
         try:
-            o=otp_genrate(6)
+            o = otp_genrate(6)
             print('otp: ', o)
+
             EmailMessage(
-                    "OTP verifications",
-                    f"Your login Otp is {o}",
-                    None,
-                    [email],
+                "OTP Verification",
+                f"Your login OTP is {o}",
+                None,
+                [email],
             ).send()
+
             request.session['user'] = user.id
-            request.session['otp']=o
-        except Exception as e:
-            return Response({"error": True, "status_code": 400, "message":"Otp not send"})
-        
-        return Response({"error": False, "status_code": 201, "message":'Login Sucessful & OTP send On Mail'})
+            request.session['otp'] = o
+
+        except Exception:
+            return Response({
+                "error": True,
+                "status_code": 500,
+                "message": "OTP not sent"
+            })
+
+        return Response({
+            "error": False,
+            "status_code": 200,
+            "message": "Login successful & OTP sent to email"
+        })
     
 
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -484,7 +490,7 @@ class AllordeerDetails(viewsets.ModelViewSet):
 
 class UserRoleviewset(viewsets.ModelViewSet):
     serializer_class = RoleUserserilizer
-    queryset = Role.objects.all()
+    queryset = RoleUser.objects.all()
     authentication_classes=[JWTAuthentication]
     permission_classes=[IsAuthenticated,IsAdminrole]
 
