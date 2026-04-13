@@ -1,19 +1,36 @@
+
 from django.shortcuts import render
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.views import APIView
+from .models import *   
+import random
+from django.contrib.auth.hashers import make_password
+from rest_framework import status
+from .serilizer import Registerserilizer,Rolepermissionserilizer,Categoryserilizer,Productserilizer,Orderserilizer,OrderDetailsserilizer,RoleUserserilizer,Roleseri,Permissionseri  
+from django.core.mail import send_mail,EmailMessage
+from main.permissions import *
+from rest_framework import  viewsets
+from main.permissions  import Dynamicpermission,Assignedpermissionset
+from main.mypagination import mypaginatior
+from django_filters.rest_framework import  DjangoFilterBackend
+from rest_framework.filters import SearchFilter,OrderingFilter
+from django.contrib.auth.hashers import check_password
+from rest_framework.response import Response
+
+def Custome_Response(error,message,status_code=200, data={}):
+    return Response({
+        "error": error,
+        "status_code": status_code,
+        "message": message,
+        "data": data
+    }, status=status_code)
+
+
 # Create your views here.
 def home(request):
     return render(request,'home.html')
-
-from rest_framework.views import APIView
-from .models import *   
-from main.serilizer import *
-import random,requests
-from django.contrib.auth.hashers import make_password
-from rest_framework.response import Response
-from django.core.mail import send_mail,EmailMessage
-
-from main.permissions import *
 
 def random_password(length):
     password=""
@@ -27,67 +44,44 @@ def random_password(length):
     return password
 
 
-from rest_framework.response import Response
 class Registerviewset(APIView):
     def post(self, request):
-        errors = {}
         data = request.data.copy()
 
-        name = data.get('username')
+        username = data.get('username')
         email = data.get('email')
 
-        if not name:
-            errors['name'] = 'UserName Is Required'
+        if not username or not email:
+            return Custome_Response(True, "Username and email are required", status_code=400)
 
-        if not email:
-            errors['email'] = 'Email Is Required'
+        if Register.objects.filter(email=email).exists():
+            return Custome_Response(True, "Email already exists", status_code=400)
 
-        if email:
-            if Register.objects.filter(email=email).exists():
-                errors['email'] = 'Email already exists'
-
-        if errors:
-            return Response({"error": True, "status_code": 400, "message": str(errors)})
-
-
-        gender = 'male'
-
-        # Random password
         password = random_password(6)
         print('password: ', password)
 
         data['password'] = make_password(password)
-        data['gender'] = gender
+        data['gender'] = 'male'
 
         serializer = Registerserilizer(data=data)
 
         if serializer.is_valid():
-            try:
-                x= serializer.save()
+            user = serializer.save()
 
-                #  Create role after user created
-                role_obj = Role.objects.get(rolename="User")
-                RoleUser.objects.create(user=x, role=role_obj)
+            role = Role.objects.get(rolename="User")
+            RoleUser.objects.create(user=user, role=role)
 
-                # Send email
-                EmailMessage(
-                    "Your Email Password",
-                    f"Your login password is {password}",
-                    None,
-                    [email],
-                ).send()
+            EmailMessage(
+                "Your Password",
+                f"Your password is {password}",
+                None,
+                [email],
+            ).send()
 
-                return Response({"error": False, "status_code": 201, "message":f"Register Successfully & Password sent to {email}"})
+            return Custome_Response(False, "Registered successfully", status_code=201)
 
-            except Exception as e:
-                return Response({"error": False, "status_code": 400, "message":"demo"})
+        return Custome_Response(True, "Invalid data provided", status_code=400)
 
-        return Response({"error": False, "status_code": 400, "message":str(serializer.errors)})
-    
-
-from rest_framework import  viewsets
-
-from main.permissions  import Dynamicpermission,Assignedpermissionset
 class RolePermissionviewset(viewsets.ModelViewSet):
     serializer_class = Rolepermissionserilizer
     queryset = RolePermission.objects.all()
@@ -107,19 +101,9 @@ class Categoryserilizerviewset(viewsets.ModelViewSet):
         x=Category.objects.filter(id=pk).first()
         if x:
             x.delete()
-            return Response(
-            {"error": False, "status_code": 200, "message": "Category Is deleted"}
-            )
-        return Response(
-            {"error": True, "status_code": 400, "message": "Category not Found"}
-            )
-
-
-from main.mypagination import mypaginatior
-from django_filters.rest_framework import  DjangoFilterBackend
-from rest_framework.filters import SearchFilter,OrderingFilter
-
-
+            return Custome_Response(False, "Category Is deleted", status_code=200)
+        return Custome_Response(True, "Category not Found", status_code=400)
+    
 class Productserilizerviewset(viewsets.ModelViewSet):   
     serializer_class = Productserilizer
     queryset = Product.objects.all()
@@ -135,15 +119,8 @@ class Productserilizerviewset(viewsets.ModelViewSet):
         x=Product.objects.filter(id=pk).first()
         if x:
             x.delete()
-            return Response(
-            {"error": False, "status_code": 200, "message": "Product Is deleted"}
-            )
-        return Response(
-            {"error": True, "status_code": 400, "message": "Product not Found"}
-            )
-
-
-
+            return Custome_Response(False, "Product Is deleted", status_code=200)
+        return Custome_Response(True, "Product not Found", status_code=400)
 
 class Orderserilizerviewset(APIView):
 
@@ -151,36 +128,25 @@ class Orderserilizerviewset(APIView):
     permission_classes = [IsAuthenticated,Orderpermission]
     
     def get(self, request):
-        orders = Order.objects.filter(user=request.user)
+        orders = Order.objects.filter(user=request.user.id)
         print('orders: ', orders)
 
         serializer = Orderserilizer(orders, many=True)
 
-        return Response({
-            "error": False,
-            "status_code": 200,
-            "message": "Display Data",
-            "Data": serializer.data
-        })
+        return Custome_Response(False, "Display Data", status_code=200, data=serializer.data)
     
     def post(self,request):
+        print('request.data: ', request.user)
+        u=Register.objects.get(username=request.user)
+        print('u: ', u.id)
         data=request.data.copy()
-        data['user']=request.session.get('user')
+        data['user']=u.id
         seri=Orderserilizer(data=data)
         if seri.is_valid():
             x=seri.save()
             OrderDetails.objects.create(order=x)
-            return Response({
-                "error": False,
-                "status_code": 201,
-                "message": "Display Data",
-                "Data": seri.data
-            })  
-        return Response({
-            "error": True,
-            "status_code": 400,
-            "message": "Not Data Add",
-        })
+            return Custome_Response(False, "Display Data", status_code=201, data=seri.data)  
+        return Custome_Response(True, "Not Data Add", status_code=400)
 
 
 class OrderDetailsserilizerviewset(viewsets.ModelViewSet):
@@ -203,23 +169,20 @@ class OrderDetailsserilizerviewset(viewsets.ModelViewSet):
         except Register.DoesNotExist:
             return OrderDetails.objects.none()
 
-
-
 def otp_genrate(length):
     otp=""
     for i in range(length):
         otp+=str(random.randint(0, 9))
     return otp
 
-from django.contrib.auth.hashers import check_password
+
 
 class Loginviewset(APIView):
     def post(self, request):
-        errors = {}
-        data = request.data
+        email = request.data.get('email')
+        password = request.data.get('password')
 
-        email = data.get('email')
-        password = data.get('password')
+        errors = {}
 
         if not email:
             errors['email'] = 'Email is required'
@@ -227,186 +190,164 @@ class Loginviewset(APIView):
             errors['password'] = 'Password is required'
 
         if errors:
-            return Response({"error": True, "status_code": 400, "message": errors})
-
+            return  Custome_Response(True, errors, status_code=400)
 
         try:
             user = Register.objects.get(email=email)
         except Register.DoesNotExist:
-            return Response({
-                "error": True,
-                "status_code": 400,
-                "message": {"email": "Email is not registered"}
-            })
+            return Custome_Response(True, "Email is not registered", status_code=404)
 
         if not check_password(password, user.password):
-            return Response({
-                "error": True,
-                "status_code": 400,
-                "message": {"password": "Incorrect password"}
-            })
+            return Custome_Response(True, "Incorrect password", status_code=400)
+
+        # Generate OTP
+        otp = otp_genrate(6)
+        print('otp: ', otp)
+        user.otp = otp
+        user.save()
+
+        EmailMessage(
+            "OTP Verification",
+            f"Your login OTP is {otp}",
+            None,
+            [email],
+        ).send()
+        request.session['user_id'] = user.id  # Store user ID in session
+        return Custome_Response(False, "OTP sent", status_code=200, data={"user_id": user.id})   # ✅ FIX
 
 
-        try:
-            o = otp_genrate(6)
-            print('otp: ', o)
-
-            EmailMessage(
-                "OTP Verification",
-                f"Your login OTP is {o}",
-                None,
-                [email],
-            ).send()
-
-            request.session['user'] = user.id
-            request.session['otp'] = o
-
-        except Exception:
-            return Response({
-                "error": True,
-                "status_code": 500,
-                "message": "OTP not sent"
-            })
-
-        return Response({
-            "error": False,
-            "status_code": 200,
-            "message": "Login successful & OTP sent to email"
-        })
     
-
-from rest_framework_simplejwt.tokens import RefreshToken
 class Otpverification(APIView):
-    def post(self,request):
-        data=request.data
-        otp=data.get('otp')
-        print( otp,request.session.get('otp'))
+    def post(self, request):
+        user_id = request.session.get('user_id')  # Retrieve user ID from session
+        print('user_id: ', user_id)
+        otp = request.data.get('otp')
 
         if not otp:
-            return Response({"error": "Enter OTP"})
-        if str(otp) != str(request.session.get('otp')):
-            return Response({"error": True, "status_code": 400, "message":"Invaide OTP"})
-        
-        user_id = request.session.get('user')
-
-        if not user_id:
-            return Response({"error": True, "status_code": 400, "message":"Session expired. Please login again"})
+            return Custome_Response(True, "otp required", status_code=400)
 
         try:
             user = Register.objects.get(id=user_id)
-            user.is_verify = True
-            user.is_staff = True
-            user.is_active = True
-            user.save()
-    
-
         except Register.DoesNotExist:
-            return Response({"error": True, "status_code": 400, "message":"User not found"})
+            return Custome_Response(True, "User not found", status_code=404)
 
+        if str(user.otp) != str(otp):
+            return Custome_Response(True, "Invalid OTP", status_code=400)
+
+        # Activate user
+        user.is_verify = True
+        user.is_active = True
+        user.otp = ''
+        user.save()
+
+        # Generate JWT
         refresh = RefreshToken.for_user(user)
-        request.session.pop('otp', None)
-        
 
-
-        return Response({
-            "error": False, "status_code": 201,
-            'message': 'OTP Confirmed',
-            'refresh': str(refresh),
-            'access': str(refresh.access_token)
+        return Custome_Response(False, "OTP Verified", status_code=200, data={
+            "access": str(refresh.access_token),
+            "refresh": str(refresh)
         })
+        request.session.pop('user_id', None)  # Clear user ID from session after verification
     
 class Logout(APIView):
     def get(self,request):
         try:
-            user_id = request.session['user']
+            user_id = request.user.id
             user = Register.objects.get(id=user_id)
     
             if user :
                 user.is_active = False
                 user.is_staff = False
                 user.save()
-                
-                request.session.pop('user')
-                return Response({"error": False, "status_code": 201,'message': 'Logout'})
+                return Custome_Response(False, "Logout", status_code=201)
             else:
-                return Response({"error": True, "status_code": 400,'message':'OTP Verification not pls Otp verified'})
+                return Custome_Response(True, "OTP Verification not pls Otp verified", status_code=400)
         except:
-            return Response({"error": True, "status_code": 400,'message':'Alredy logout pls login'})
+            return Custome_Response(True, "Already logout pls login", status_code=400)
         
 
 class forceloogout(APIView):
     def get(self,request):
-        request.session.pop('user')
-        return Response({"error": False, "status_code": 200,'message': 'Logout'})
+        request.user.is_active = False
+        request.user.is_staff = False
+        request.user.save()
+        return Custome_Response(False, "Logout", status_code=200)
     
-
-# change password
 class ChangePassword(APIView):
     def post(self,request):
         data=request.data
         old_password=data.get('old_password')
         new_password=data.get('new_password')
-        user_id = request.session.get('user')
+        user_id = request.user.id
         if not old_password:
-            return Response({"error": True, "status_code": 400,"message": "Enter Old Password"})    
+            return Custome_Response(True, "Enter Old Password", status_code=400)    
         if not new_password:
-            return Response({"error": True, "status_code": 400,"message": "Enter New Password"})
+            return Custome_Response(True, "Enter New Password", status_code=400)
         
         if old_password == new_password:
-            return Response({"error": True, "status_code": 400,"message": "Old Password and New Password cannot be the same"})
+            return Custome_Response(True, "Old Password and New Password cannot be the same", status_code=400)
 
         if not user_id:
-            return Response({"error": True, "status_code": 400,"message": "Session expired. Please login again"})
+            return Custome_Response(True, "Session expired. Please login again", status_code=400)
 
         try:
             user = Register.objects.get(id=user_id)
             if not check_password(old_password, user.password):
-                return Response({"error": True, "status_code": 400,"message": "Old password is incorrect"})
+                return Custome_Response(True, "Old password is incorrect", status_code=400)
             user.password = make_password(new_password)
             user.save()
-            return Response({"error": False, "status_code": 200,"message": "Password changed successfully"})
+            return Custome_Response(False, "Password changed successfully", status_code=200)
         except Register.DoesNotExist:
-            return Response({"error": True, "status_code": 400,"error": "User not found"})
+            return Custome_Response(True, "User not found", status_code=400)
         
 
 
 class usersviewset(APIView):
     def get(self,request):
-        if not request.session.get('user'):
-            return Response({"error": True, "status_code": 400, "message": "Pls Login"})
-        user = request.session.get('user')
+        if not request.user:
+            return Custome_Response(True, "Pls Login", status_code=400)
+        user = request.user.id
         try:
             x = RoleUser.objects.get(user_id=user)
             print('x: ', x.role.rolename)
         except RoleUser.DoesNotExist:
-            return Response({"error": True, "status_code": 400, "message": "User not found"})
+            return Custome_Response(True, "User not found", status_code=400)
 
         if x.role.rolename != 'Admin' and x.role.rolename != 'Manager':
-            return Response({"error": True, "status_code": 400, "message": "You don't have permission to access this resource"})
+            return Custome_Response(True, "You don't have permission to access this resource", status_code=400)
         users_count = Register.objects.count()
         users = Register.objects.all()
-        return Response({"error": False, "status_code": 200, "message": "Success", "data": {'Total user:': users_count, 'users': Registerserilizer(users, many=True).data}}) 
+        return Response({
+            "error": False,
+            "status_code": 200,
+            "message": "view All Users",
+            "total_users": users_count,
+            "data":  Registerserilizer(users, many=True).data
+        }, status=200)
     
-
 class ActivateUser(APIView):
-    def get(self,request):
-        if not request.session.get('user'):
-            return Response({"error": True, "status_code": 400, "message": "Pls Login"})
-        user = request.session.get('user')
+    def get(self,request):  
+        if not request.user:
+            return Custome_Response(True, "Pls Login", status_code=400)
+        user = request.user.id
+        
         try:
             x = RoleUser.objects.get(user_id=user)
             print('x: ', x.role.rolename)
         except RoleUser.DoesNotExist:
-            return Response({"error": True, "status_code": 400, "message": "User not found"})
+            return Custome_Response(True, "User not found", status_code=400)
 
         if x.role.rolename != 'Admin' and x.role.rolename != 'Manager':
-            return Response({"error": True, "status_code": 400, "message": "You don't have permission to access this resource"})
+            return Custome_Response(True, "You don't have permission to access this resource", status_code=400)
         users_count = Register.objects.filter(is_active=True).count()
         users = Register.objects.filter(is_active=True)
-        return Response({"error": False, "status_code": 200, "message": "Success", "data": {'Total Active User:': users_count, 'users': Registerserilizer(users, many=True).data}})
-
-
-
+        return Response({
+            "error": False,
+            "status_code": 200,
+            "message": "view All Active Users",
+            "total_users": users_count,
+            "data":  Registerserilizer(users, many=True).data
+        }, status=200)
 
 class userviewset(viewsets.ModelViewSet):
     serializer_class = Registerserilizer
@@ -425,12 +366,8 @@ class userviewset(viewsets.ModelViewSet):
         x=Register.objects.filter(id=pk).first()
         if x:
             x.delete()
-            return Response(
-            {"error": False, "status_code": 200, "message": "User Is deleted"}
-            )
-        return Response(
-            {"error": True, "status_code": 400, "message": "User not Found"}
-            )
+            return Custome_Response(False, "User Is deleted", status_code=200)
+        return Custome_Response(True, "User not Found", status_code=400)
 
 class Roleviewset(viewsets.ModelViewSet):
     serializer_class =  Roleseri
@@ -443,12 +380,8 @@ class Roleviewset(viewsets.ModelViewSet):
         x=Role.objects.filter(id=pk,is_delete=False).first()
         if x:
             x.delete()
-            return Response(
-            {"error": False, "status_code": 200, "message": "Permission Is deleted"}
-            )
-        return Response(
-            {"error": True, "status_code": 400, "message": "Id not Found"}
-            )
+            return Custome_Response(False, "Permission Is deleted", status_code=200)
+        return Custome_Response(True, "Id not Found", status_code=400)
 
 
 
@@ -464,12 +397,8 @@ class Permisssionviewset(viewsets.ModelViewSet):
         x=Permission.objects.filter(id=pk).first()
         if x:
             x.delete()
-            return Response(
-            {"error": False, "status_code": 200, "message": "Permission Is deleted"}
-            )
-        return Response(
-            {"error": True, "status_code": 400, "message": "Id not Found"}
-            )
+            return Custome_Response(False, "Permission Is deleted", status_code=200)
+        return Custome_Response(True, "Id not Found", status_code=400)
     
 
 
