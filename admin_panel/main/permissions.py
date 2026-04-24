@@ -47,7 +47,7 @@ class Assignedpermissionset(BasePermission):
         rolename = role_obj.role.rolename
         print('rolename: ', rolename)
         if rolename == 'User':
-            self.message = "Not permission to access"
+            self.message = "You do not have permission to access this resource."
             return False
         elif rolename == 'Manager':
             return request.method in ['GET', 'POST', 'PUT', 'PATCH']

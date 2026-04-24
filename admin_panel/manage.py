@@ -4,7 +4,7 @@ import os
 import sys
 from dotenv import load_dotenv
 
-def main():
+def main(): 
     load_dotenv()
     """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'admin_panel.settings')

@@ -16,7 +16,7 @@ class Roleseri(serializers.ModelSerializer):
 
     def validate_rolename(self,data):
         if not data[0].isupper():
-            raise serializers.ValidationError("First letter is upper.")
+            raise serializers.ValidationError("Role name must start with an uppercase letter.")
 
         if Role.objects.filter(rolename__iexact=data).exists():
             raise serializers.ValidationError("Role already exists.")
