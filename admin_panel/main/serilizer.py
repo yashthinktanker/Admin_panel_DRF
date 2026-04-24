@@ -6,7 +6,7 @@ class Registerserilizer(serializers.ModelSerializer):
   
     class Meta:
         model = Register
-        fields = ['username','email','gender']
+        fields = ['id','username','email','gender','password']
 
 class Roleseri(serializers.ModelSerializer):
     class Meta:
@@ -16,7 +16,7 @@ class Roleseri(serializers.ModelSerializer):
 
     def validate_rolename(self,data):
         if not data[0].isupper():
-            raise serializers.ValidationError("First letter is upper.")
+            raise serializers.ValidationError("Role name must start with an uppercase letter.")
 
         if Role.objects.filter(rolename__iexact=data).exists():
             raise serializers.ValidationError("Role already exists.")
@@ -26,7 +26,8 @@ class Roleseri(serializers.ModelSerializer):
 class Permissionseri(serializers.ModelSerializer):
     class Meta:
         model = Permission
-        fields = '__all__'
+        # fields = '__all__'
+        exclude = ['is_delete']
 
     def validate_permission_name(self, data):
         allowed = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
@@ -87,10 +88,17 @@ class OrderDetailsserilizer(serializers.ModelSerializer):
         model = OrderDetails
         # fields = '__all__'
         exclude = ['is_delete']
-        
-    def validate(self, data):
-        if data == None:
-            return Response({"error": True, "status_code": 400, "message": "Invalid data provided"})
+
+    
+class OrderDetailsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderDetails
+        exclude = ['is_delete']
+
+              
+    # def validate(self, data):
+    #     if data == None:
+    #         return Response({"error": True, "status_code": 400, "message": "Invalid data provided"})
 
 
 class Rolepermissionserilizer(serializers.ModelSerializer):
@@ -105,7 +113,8 @@ class Rolepermissionserilizer(serializers.ModelSerializer):
 
     class Meta:
         model = RolePermission
-        fields = '__all__'
+        # fields = '__all__'
+        exclude = ['is_delete']
 
 
 
@@ -113,5 +122,5 @@ class RoleUserserilizer(serializers.ModelSerializer):
     class Meta:
         model = RoleUser
         # fields = '__all__'
-        exclude = ['is_delete']
+        
         

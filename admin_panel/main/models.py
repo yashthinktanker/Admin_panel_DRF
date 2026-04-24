@@ -5,6 +5,7 @@ from django.contrib.auth.models import AbstractUser
 ROLE_CHOICES = [
         ("Manager", "Manager"),
         ("User", "User"),
+        ("Admin", "Admin"),
         ("Viewer", "Viewer"),
     ]
 
@@ -25,9 +26,11 @@ class SoftDelete(models.Model):
 
     def soft_delete(self):
         self.is_delete = True
+        self.save()
     
     def restore(self):
         self.is_delete = False
+        self.save()
 
     class Meta:
         abstract = True
@@ -53,13 +56,14 @@ class RolePermission(SoftDelete):
     def __str__(self):
         return f"{self.role.rolename} - {self.permission.permission_name}"
     
-class Register(AbstractUser):
+class Register(AbstractUser,SoftDelete):
     # username = models.CharField(max_length=150, unique=True)
     # email = models.EmailField(unique=True)
     gender = models.CharField(max_length=7,default='male')
     # password = models.CharField(max_length=100,default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    otp = models.CharField(max_length=10,default='')
 
     def __str__(self):
         return self.username
@@ -69,7 +73,7 @@ class RoleUser(SoftDelete):
     role = models.ForeignKey(Role, on_delete=models.CASCADE,default='User')
 
     def __str__(self):
-        return f"{self.user.username} - {self.role.rolename}"
+        return f"{self.user.username} - {self.role.rolename} - {self.id}"
 
 class Category(SoftDelete):
     category_name = models.CharField(max_length=16,unique=True)
@@ -94,8 +98,8 @@ class Order(SoftDelete):
         return self.user.username
 
 STATUS_CHOICES = [
-        ("pending", "pending"),
-        ("process", "process"),
+        ("Pending", "Pending"),
+        ("Process", "Process"),
         ("Completed", "Completed"),
     ]
 
